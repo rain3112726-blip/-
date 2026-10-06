@@ -1,0 +1,190 @@
+{
+  "name": "超商避雷吃貨包🏪",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "7416c5eb-7fd3-484d-9cba-cd9d43676ff2",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.2,
+      "position": [
+        0,
+        0
+      ],
+      "id": "c2281c46-5658-441f-8900-4c42b183f851",
+      "name": "Webhook",
+      "webhookId": "7416c5eb-7fd3-484d-9cba-cd9d43676ff2"
+    },
+    {
+      "parameters": {
+        "mode": "raw",
+        "jsonOutput": "={\n  \"userId\": \"{{ $json.body.events[0].source.userId }}\",\n  \"replyToken\": \"{{ $json.body.events[0].replyToken }} \",\n  \"userContent\": \"{{ $json.body.events[0].message.text }}\"\n}\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [
+        224,
+        0
+      ],
+      "id": "2330d0b5-0a12-4314-82e1-894331b9db9f",
+      "name": "Edit Fields"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=#userId\n {{ $json.userId }}\n\n#用戶訊息\n{{ $json.userContent }}",
+        "options": {
+          "systemMessage": "# 角色\n你是「健人」，是一位營養師，負責分辨「偽健康食品」與假行銷話術的 AI 小精靈。\n你的個性直白、中肯且帶有微酸幽默。\n\n# 任務\n1. 接收使用者輸入的食品名稱、成分表或營養標示文字。\n2. 檢查隱藏糖分與過度添加物。\n3. 結合使用者的偏好（食量/預算/吃或喝），計算【營養 CP 值】（每百元含多少克蛋白質或膳食纖維），給出燈號評估與替代品建議。\n4. 如果使用者提供價格，可以評估【價格CP值】，並淺提供不同價位的替代品建議。\n\n# 對話脈絡與記憶處理\n1. 請參照上下文對話紀錄。當使用者詢問「剛才提到的產品」、「第一個替代品」、「那款三明治」等代名詞時，請找出上文提到的產品名稱。\n2. 針對該產品，依據其成分、隱藏糖/脂肪風險或 CP 值補充說明。\n\n# 輸出格式\n不使用 Markdown 粗體語法（例如 **文字**）\n若有重點可以使用emoji\n\n【防雷檢測】：🟢 安全 / 🟡 酌量 / 🔴 標題黨刺客\n【成分拆解】：100字之內\n• 陷阱抓包：點出隱藏糖或主要問題\n• 營養 CP 值：如果有價格，算每 100 元得多少純蛋白質/纖維\n【小精靈碎碎唸】：直白幽默的總結\n【推薦替代品】：依據用戶偏好給出幾個更好/不同口味(甜鹹，喝或吃)的選擇"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        448,
+        0
+      ],
+      "id": "e6f852d8-ac7d-4e39-af39-9f7788b7dfbf",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.line.me/v2/bot/message/reply",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer 0W7SsyzW3HQXg3RqoJNHNnWL/bGFuq/G+tyFjlSA16bZfa/fF2cJkFm8VMsSjPn/+AbP0y+vlekXXbA/Hb9/QbHrr/z2WHY+24Q2piL3ASnBM55/DKsPGK1/tLYL+mD89DyEJ6eGCyW448bZtN66SwdB04t89/1O/w1cDnyilFU="
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"replyToken\": {{ JSON.stringify($('Edit Fields').item.json.replyToken) }},\n  \"messages\": [\n    {\n      \"type\": \"text\",\n      \"text\": {{ JSON.stringify($json.output) }}\n    }\n  ]\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        816,
+        0
+      ],
+      "id": "f65406f7-dc16-489b-8904-e3011a472104",
+      "name": "HTTP Request"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1.2,
+      "position": [
+        448,
+        160
+      ],
+      "id": "b2b6e44a-82e7-457f-87e3-ce9f7c94e3ed",
+      "name": "Google Gemini Chat Model",
+      "credentials": {
+        "googlePalmApi": {
+          "id": null,
+          "name": "",
+          "__aiGatewayManaged": true
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "={{ $('Edit Fields').item.json.userId }}",
+        "contextWindowLength": 10
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.4,
+      "position": [
+        544,
+        160
+      ],
+      "id": "c2e2a86e-871e-4ae5-b153-1dae92932a55",
+      "name": "Simple Memory"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Simple Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "2164e370-204f-42a5-a88f-44ee997de01e",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "b06d7c20fd4a80ca63be2b1e0fb4bd6e9264d6a88362f12ae4cabf68288522f7"
+  },
+  "nodeGroups": [],
+  "id": "eabeuqbeqLzLW3vq",
+  "tags": []
+}
